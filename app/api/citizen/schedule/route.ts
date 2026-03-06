@@ -15,15 +15,25 @@ export async function GET() {
     await connectDB();
     const user = await User.findOne({ email: session.user.email });
 
+    if (!user) {
+      return NextResponse.json({ error: 'User not found' }, { status: 404 });
+    }
+
     // Find the next upcoming schedule for the user's area
-    // In a real app, we would match user.address.area exactly.
-    // For this prototype, we'll try to match area or default to next available.
-    
     const now = new Date();
-    const nextSchedule = await Schedule.findOne({
-      area: user?.address?.area || 'Koramangala', // Fallback if address missing
-      scheduledTime: { $gt: now }
-    }).sort({ scheduledTime: 1 });
+    const query: any = {
+      scheduledTime: { $gt: now },
+      status: { $in: ['scheduled', 'in_transit'] },
+    };
+
+    // Only filter by area if user has an area set
+    if (user.address?.area) {
+      query.area = user.address.area;
+    }
+
+    const nextSchedule = await Schedule.findOne(query)
+      .sort({ scheduledTime: 1 })
+      .populate('vehicleId');
 
     return NextResponse.json({ schedule: nextSchedule });
   } catch (error) {

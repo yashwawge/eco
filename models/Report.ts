@@ -14,6 +14,7 @@ export interface IReport extends Document {
   photos: string[];
   status: 'pending' | 'assigned' | 'in_progress' | 'resolved';
   assignedTo?: string;
+  completionPhoto?: string;
   priority: 'low' | 'medium' | 'high';
   ecoPointsAwarded: number;
   createdAt: Date;
@@ -42,6 +43,7 @@ const ReportSchema = new Schema<IReport>({
     default: 'pending',
   },
   assignedTo: String,
+  completionPhoto: String,
   priority: { type: String, enum: ['low', 'medium', 'high'], default: 'medium' },
   ecoPointsAwarded: { type: Number, default: 0 },
   createdAt: { type: Date, default: Date.now },

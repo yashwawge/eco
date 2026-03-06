@@ -38,12 +38,24 @@ export default function CompostingHub() {
   const handleSellSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!navigator.geolocation) {
-       alert('Geolocation is needed to list an item.');
-       return;
+      alert('Geolocation is needed to list an item.');
+      return;
     }
 
     navigator.geolocation.getCurrentPosition(async (position) => {
       try {
+        // Reverse geocode to get address
+        let address = 'Location detected';
+        try {
+          const res = await fetch(`https://nominatim.openstreetmap.org/reverse?format=json&lat=${position.coords.latitude}&lon=${position.coords.longitude}`);
+          const data = await res.json();
+          if (data && data.display_name) {
+            address = data.display_name.split(',').slice(0, 3).join(',');
+          }
+        } catch (e) {
+          console.error('Geocoding error:', e);
+        }
+
         const res = await fetch('/api/compost', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
@@ -53,11 +65,11 @@ export default function CompostingHub() {
             pricePerKg: Number(newListing.price),
             description: newListing.description,
             type: newListing.type,
-            location: { 
-              lat: position.coords.latitude, 
-              lng: position.coords.longitude, 
-              address: 'Bangalore' // Could reverse geocode here too if needed
-            } 
+            location: {
+              lat: position.coords.latitude,
+              lng: position.coords.longitude,
+              address
+            }
           }),
         });
         if (res.ok) {
@@ -80,7 +92,7 @@ export default function CompostingHub() {
           <h1 className="text-3xl font-bold text-gray-800">Composting Hub</h1>
           <p className="text-gray-600">Turn waste into wealth. Buy, sell, or learn.</p>
         </div>
-        <button 
+        <button
           onClick={() => setShowSellModal(true)}
           className="btn-primary flex items-center gap-2"
         >
@@ -95,11 +107,10 @@ export default function CompostingHub() {
           <button
             key={tab}
             onClick={() => setActiveTab(tab as any)}
-            className={`pb-3 px-2 font-medium capitalize transition-colors border-b-2 ${
-              activeTab === tab 
-                ? 'border-eco-500 text-eco-600' 
-                : 'border-transparent text-gray-500 hover:text-gray-700'
-            }`}
+            className={`pb-3 px-2 font-medium capitalize transition-colors border-b-2 ${activeTab === tab
+              ? 'border-eco-500 text-eco-600'
+              : 'border-transparent text-gray-500 hover:text-gray-700'
+              }`}
           >
             {tab === 'buy' ? 'Marketplace' : 'Learn Composting'}
           </button>
@@ -128,7 +139,7 @@ export default function CompostingHub() {
                   </div>
                   <p className="text-gray-600 text-sm mb-4 line-clamp-2">{listing.description}</p>
                   <div className="flex justify-between items-center text-sm">
-                    <span className="text-gray-500">By {listing.seller.name}</span>
+                    <span className="text-gray-500">By {listing.seller?.name || 'Anonymous'}</span>
                     <span className="font-medium text-gray-700">{listing.quantity} kg avail</span>
                   </div>
                   <button className="w-full mt-4 btn-secondary py-2 text-sm">
@@ -146,40 +157,267 @@ export default function CompostingHub() {
         )}
 
         {activeTab === 'learn' && (
-          <div className="grid md:grid-cols-2 gap-8">
-            <div className="glass-card p-8">
-              <h2 className="text-2xl font-bold text-gray-800 mb-4">Why Compost?</h2>
-              <ul className="space-y-4 text-gray-600">
-                <li className="flex gap-3">
-                  <div className="w-6 h-6 rounded-full bg-eco-100 flex items-center justify-center text-eco-600 font-bold shrink-0">1</div>
-                  <span>Reduces landfill waste by up to 50%</span>
-                </li>
-                <li className="flex gap-3">
-                  <div className="w-6 h-6 rounded-full bg-eco-100 flex items-center justify-center text-eco-600 font-bold shrink-0">2</div>
-                  <span>Reduces methane emissions significantly</span>
-                </li>
-                <li className="flex gap-3">
-                  <div className="w-6 h-6 rounded-full bg-eco-100 flex items-center justify-center text-eco-600 font-bold shrink-0">3</div>
-                  <span>Creates nutrient-rich soil for your garden</span>
-                </li>
-              </ul>
-            </div>
-            <div className="glass-card p-8">
-              <h2 className="text-2xl font-bold text-gray-800 mb-4">How to Start?</h2>
-              <div className="space-y-4">
-                <div className="p-4 bg-white rounded-xl border border-gray-100">
-                  <h3 className="font-bold text-earth-700 mb-1">1. Choose a Bin</h3>
-                  <p className="text-sm text-gray-600">Select a container with good ventilation.</p>
+          <div className="space-y-8">
+            {/* Hero Section */}
+            <div className="glass-card p-8 bg-gradient-to-br from-earth-50 to-eco-50">
+              <h2 className="text-3xl font-bold text-gray-800 mb-3">Learn Composting</h2>
+              <p className="text-lg text-gray-600 mb-4">
+                Transform your kitchen waste into nutrient-rich compost and contribute to a sustainable future.
+              </p>
+              <div className="grid grid-cols-3 gap-4 mt-6">
+                <div className="text-center">
+                  <div className="text-3xl font-bold text-eco-600">50%</div>
+                  <div className="text-sm text-gray-600">Less Landfill Waste</div>
                 </div>
-                <div className="p-4 bg-white rounded-xl border border-gray-100">
-                  <h3 className="font-bold text-earth-700 mb-1">2. Mix Greens & Browns</h3>
-                  <p className="text-sm text-gray-600">Kitchen scraps (Greens) + Dry leaves/Paper (Browns).</p>
+                <div className="text-center">
+                  <div className="text-3xl font-bold text-earth-600">100%</div>
+                  <div className="text-sm text-gray-600">Natural Fertilizer</div>
                 </div>
-                <div className="p-4 bg-white rounded-xl border border-gray-100">
-                  <h3 className="font-bold text-earth-700 mb-1">3. Aerate & Moisten</h3>
-                  <p className="text-sm text-gray-600">Turn the pile weekly and keep it moist like a sponge.</p>
+                <div className="text-center">
+                  <div className="text-3xl font-bold text-ocean-600">Zero</div>
+                  <div className="text-sm text-gray-600">Chemical Additives</div>
                 </div>
               </div>
+            </div>
+
+            {/* Why Compost */}
+            <div className="glass-card p-8">
+              <h3 className="text-2xl font-bold text-gray-800 mb-6 flex items-center gap-2">
+                <SparklesIcon className="w-7 h-7 text-eco-600" />
+                Why Compost?
+              </h3>
+              <div className="grid md:grid-cols-2 gap-6">
+                <div className="space-y-4">
+                  <div className="flex gap-4">
+                    <div className="w-10 h-10 rounded-full bg-eco-100 flex items-center justify-center text-eco-600 font-bold shrink-0">1</div>
+                    <div>
+                      <h4 className="font-semibold text-gray-800 mb-1">Reduces Landfill Waste</h4>
+                      <p className="text-sm text-gray-600">Organic waste makes up 50% of household waste. Composting diverts it from landfills.</p>
+                    </div>
+                  </div>
+                  <div className="flex gap-4">
+                    <div className="w-10 h-10 rounded-full bg-eco-100 flex items-center justify-center text-eco-600 font-bold shrink-0">2</div>
+                    <div>
+                      <h4 className="font-semibold text-gray-800 mb-1">Reduces Methane Emissions</h4>
+                      <p className="text-sm text-gray-600">Organic waste in landfills produces methane, a potent greenhouse gas. Composting prevents this.</p>
+                    </div>
+                  </div>
+                  <div className="flex gap-4">
+                    <div className="w-10 h-10 rounded-full bg-eco-100 flex items-center justify-center text-eco-600 font-bold shrink-0">3</div>
+                    <div>
+                      <h4 className="font-semibold text-gray-800 mb-1">Creates Nutrient-Rich Soil</h4>
+                      <p className="text-sm text-gray-600">Compost improves soil structure, retains moisture, and provides essential nutrients for plants.</p>
+                    </div>
+                  </div>
+                </div>
+                <div className="space-y-4">
+                  <div className="flex gap-4">
+                    <div className="w-10 h-10 rounded-full bg-earth-100 flex items-center justify-center text-earth-600 font-bold shrink-0">4</div>
+                    <div>
+                      <h4 className="font-semibold text-gray-800 mb-1">Saves Money</h4>
+                      <p className="text-sm text-gray-600">Reduce spending on chemical fertilizers and waste disposal fees.</p>
+                    </div>
+                  </div>
+                  <div className="flex gap-4">
+                    <div className="w-10 h-10 rounded-full bg-earth-100 flex items-center justify-center text-earth-600 font-bold shrink-0">5</div>
+                    <div>
+                      <h4 className="font-semibold text-gray-800 mb-1">Supports Local Food</h4>
+                      <p className="text-sm text-gray-600">Grow healthier vegetables and herbs in your own garden with homemade compost.</p>
+                    </div>
+                  </div>
+                  <div className="flex gap-4">
+                    <div className="w-10 h-10 rounded-full bg-earth-100 flex items-center justify-center text-earth-600 font-bold shrink-0">6</div>
+                    <div>
+                      <h4 className="font-semibold text-gray-800 mb-1">Earn Eco-Points</h4>
+                      <p className="text-sm text-gray-600">Sell your compost on our marketplace and earn rewards!</p>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            {/* Step-by-Step Guide */}
+            <div className="glass-card p-8">
+              <h3 className="text-2xl font-bold text-gray-800 mb-6">Step-by-Step Composting Guide</h3>
+              <div className="space-y-6">
+                <div className="border-l-4 border-eco-500 pl-6 py-2">
+                  <h4 className="font-bold text-lg text-gray-800 mb-2">Step 1: Choose Your Bin</h4>
+                  <p className="text-gray-600 mb-3">Select a container with good ventilation. Options include:</p>
+                  <ul className="list-disc list-inside space-y-1 text-sm text-gray-600 ml-4">
+                    <li>Plastic compost bin (20-30L for small households)</li>
+                    <li>Terracotta pot with drainage holes</li>
+                    <li>Wooden crate lined with newspaper</li>
+                    <li>Commercial vermicompost bin (with worms)</li>
+                  </ul>
+                </div>
+
+                <div className="border-l-4 border-eco-500 pl-6 py-2">
+                  <h4 className="font-bold text-lg text-gray-800 mb-2">Step 2: Layer Your Materials</h4>
+                  <p className="text-gray-600 mb-3">Create layers of "Greens" and "Browns" in a 1:3 ratio:</p>
+                  <div className="grid md:grid-cols-2 gap-4">
+                    <div className="bg-green-50 p-4 rounded-lg">
+                      <h5 className="font-semibold text-green-800 mb-2">🟢 Greens (Nitrogen-rich)</h5>
+                      <ul className="text-sm text-gray-700 space-y-1">
+                        <li>• Fruit & vegetable peels</li>
+                        <li>• Coffee grounds & tea bags</li>
+                        <li>• Fresh grass clippings</li>
+                        <li>• Plant trimmings</li>
+                      </ul>
+                    </div>
+                    <div className="bg-amber-50 p-4 rounded-lg">
+                      <h5 className="font-semibold text-amber-800 mb-2">🟤 Browns (Carbon-rich)</h5>
+                      <ul className="text-sm text-gray-700 space-y-1">
+                        <li>• Dry leaves</li>
+                        <li>• Shredded newspaper</li>
+                        <li>• Cardboard pieces</li>
+                        <li>• Sawdust</li>
+                      </ul>
+                    </div>
+                  </div>
+                </div>
+
+                <div className="border-l-4 border-eco-500 pl-6 py-2">
+                  <h4 className="font-bold text-lg text-gray-800 mb-2">Step 3: Maintain Moisture & Aeration</h4>
+                  <p className="text-gray-600 mb-2">Keep your compost healthy:</p>
+                  <ul className="list-disc list-inside space-y-1 text-sm text-gray-600 ml-4">
+                    <li>Moisture: Like a wrung-out sponge (not too wet, not too dry)</li>
+                    <li>Turn/mix the pile every 3-4 days for oxygen</li>
+                    <li>Add water if too dry, add browns if too wet</li>
+                    <li>Cover to prevent pests and excess rain</li>
+                  </ul>
+                </div>
+
+                <div className="border-l-4 border-eco-500 pl-6 py-2">
+                  <h4 className="font-bold text-lg text-gray-800 mb-2">Step 4: Wait & Harvest</h4>
+                  <p className="text-gray-600 mb-2">Timeline and signs of readiness:</p>
+                  <ul className="list-disc list-inside space-y-1 text-sm text-gray-600 ml-4">
+                    <li>Hot composting: 3-4 weeks</li>
+                    <li>Cold composting: 3-6 months</li>
+                    <li>Vermicomposting: 2-3 months</li>
+                    <li>Ready when: Dark brown, crumbly, earthy smell</li>
+                  </ul>
+                </div>
+              </div>
+            </div>
+
+            {/* Do's and Don'ts */}
+            <div className="grid md:grid-cols-2 gap-6">
+              <div className="glass-card p-6 border-l-4 border-green-500">
+                <h3 className="text-xl font-bold text-green-800 mb-4">✅ Do Compost</h3>
+                <ul className="space-y-2 text-sm text-gray-700">
+                  <li className="flex items-start gap-2">
+                    <span className="text-green-600 font-bold">✓</span>
+                    <span>Fruit and vegetable scraps</span>
+                  </li>
+                  <li className="flex items-start gap-2">
+                    <span className="text-green-600 font-bold">✓</span>
+                    <span>Eggshells (crushed)</span>
+                  </li>
+                  <li className="flex items-start gap-2">
+                    <span className="text-green-600 font-bold">✓</span>
+                    <span>Coffee grounds and filters</span>
+                  </li>
+                  <li className="flex items-start gap-2">
+                    <span className="text-green-600 font-bold">✓</span>
+                    <span>Tea bags (remove staples)</span>
+                  </li>
+                  <li className="flex items-start gap-2">
+                    <span className="text-green-600 font-bold">✓</span>
+                    <span>Dry leaves and grass clippings</span>
+                  </li>
+                  <li className="flex items-start gap-2">
+                    <span className="text-green-600 font-bold">✓</span>
+                    <span>Shredded paper and cardboard</span>
+                  </li>
+                </ul>
+              </div>
+
+              <div className="glass-card p-6 border-l-4 border-red-500">
+                <h3 className="text-xl font-bold text-red-800 mb-4">❌ Don't Compost</h3>
+                <ul className="space-y-2 text-sm text-gray-700">
+                  <li className="flex items-start gap-2">
+                    <span className="text-red-600 font-bold">✗</span>
+                    <span>Meat, fish, or bones</span>
+                  </li>
+                  <li className="flex items-start gap-2">
+                    <span className="text-red-600 font-bold">✗</span>
+                    <span>Dairy products</span>
+                  </li>
+                  <li className="flex items-start gap-2">
+                    <span className="text-red-600 font-bold">✗</span>
+                    <span>Oils and fats</span>
+                  </li>
+                  <li className="flex items-start gap-2">
+                    <span className="text-red-600 font-bold">✗</span>
+                    <span>Diseased plants</span>
+                  </li>
+                  <li className="flex items-start gap-2">
+                    <span className="text-red-600 font-bold">✗</span>
+                    <span>Pet waste</span>
+                  </li>
+                  <li className="flex items-start gap-2">
+                    <span className="text-red-600 font-bold">✗</span>
+                    <span>Glossy/coated paper</span>
+                  </li>
+                </ul>
+              </div>
+            </div>
+
+            {/* Troubleshooting */}
+            <div className="glass-card p-8">
+              <h3 className="text-2xl font-bold text-gray-800 mb-6">Common Issues & Solutions</h3>
+              <div className="space-y-4">
+                <div className="p-4 bg-yellow-50 rounded-lg border border-yellow-200">
+                  <h4 className="font-semibold text-gray-800 mb-2">😷 Bad Smell?</h4>
+                  <p className="text-sm text-gray-600"><strong>Cause:</strong> Too wet or too many greens</p>
+                  <p className="text-sm text-gray-600"><strong>Solution:</strong> Add dry browns (leaves, paper), turn more frequently</p>
+                </div>
+                <div className="p-4 bg-blue-50 rounded-lg border border-blue-200">
+                  <h4 className="font-semibold text-gray-800 mb-2">🐛 Pests or Flies?</h4>
+                  <p className="text-sm text-gray-600"><strong>Cause:</strong> Exposed food scraps</p>
+                  <p className="text-sm text-gray-600"><strong>Solution:</strong> Bury scraps under browns, keep bin covered</p>
+                </div>
+                <div className="p-4 bg-gray-50 rounded-lg border border-gray-200">
+                  <h4 className="font-semibold text-gray-800 mb-2">🐌 Too Slow?</h4>
+                  <p className="text-sm text-gray-600"><strong>Cause:</strong> Too dry, too cold, or not enough greens</p>
+                  <p className="text-sm text-gray-600"><strong>Solution:</strong> Add water, add greens, turn more often, move to warmer spot</p>
+                </div>
+              </div>
+            </div>
+
+            {/* Video Resources */}
+            <div className="glass-card p-8">
+              <h3 className="text-2xl font-bold text-gray-800 mb-6">📺 Video Tutorials</h3>
+              <div className="grid md:grid-cols-2 gap-4">
+                <a href="https://www.youtube.com/results?search_query=home+composting+for+beginners" target="_blank" rel="noopener noreferrer" className="p-4 border-2 border-gray-200 rounded-lg hover:border-eco-500 transition-colors">
+                  <div className="font-semibold text-gray-800 mb-1">Composting for Beginners</div>
+                  <div className="text-sm text-gray-600">Step-by-step video guide</div>
+                </a>
+                <a href="https://www.youtube.com/results?search_query=vermicomposting+at+home" target="_blank" rel="noopener noreferrer" className="p-4 border-2 border-gray-200 rounded-lg hover:border-eco-500 transition-colors">
+                  <div className="font-semibold text-gray-800 mb-1">Vermicomposting Setup</div>
+                  <div className="text-sm text-gray-600">Using worms for faster composting</div>
+                </a>
+                <a href="https://www.youtube.com/results?search_query=balcony+composting" target="_blank" rel="noopener noreferrer" className="p-4 border-2 border-gray-200 rounded-lg hover:border-eco-500 transition-colors">
+                  <div className="font-semibent text-gray-800 mb-1">Balcony Composting</div>
+                  <div className="text-sm text-gray-600">Perfect for apartment living</div>
+                </a>
+                <a href="https://www.youtube.com/results?search_query=troubleshooting+compost+problems" target="_blank" rel="noopener noreferrer" className="p-4 border-2 border-gray-200 rounded-lg hover:border-eco-500 transition-colors">
+                  <div className="font-semibold text-gray-800 mb-1">Troubleshooting Guide</div>
+                  <div className="text-sm text-gray-600">Fix common composting issues</div>
+                </a>
+              </div>
+            </div>
+
+            {/* Call to Action */}
+            <div className="glass-card p-8 bg-gradient-eco text-white text-center">
+              <h3 className="text-2xl font-bold mb-3">Ready to Start Composting?</h3>
+              <p className="mb-6 opacity-90">Join thousands of citizens making a difference. Start composting today!</p>
+              <button
+                onClick={() => setActiveTab('buy')}
+                className="bg-white text-eco-600 font-bold py-3 px-8 rounded-xl hover:shadow-2xl transition-all duration-300 hover:scale-105"
+              >
+                Browse Marketplace
+              </button>
             </div>
           </div>
         )}
@@ -193,10 +431,10 @@ export default function CompostingHub() {
             <form onSubmit={handleSellSubmit} className="space-y-4">
               <div>
                 <label className="block text-sm font-medium mb-1">Type</label>
-                <select 
+                <select
                   className="input-field"
                   value={newListing.type}
-                  onChange={e => setNewListing({...newListing, type: e.target.value})}
+                  onChange={e => setNewListing({ ...newListing, type: e.target.value })}
                 >
                   <option value="vermicompost">Vermicompost</option>
                   <option value="pot_compost">Pot Compost</option>
@@ -206,45 +444,45 @@ export default function CompostingHub() {
               <div className="grid grid-cols-2 gap-4">
                 <div>
                   <label className="block text-sm font-medium mb-1">Quantity (kg)</label>
-                  <input 
-                    type="number" 
+                  <input
+                    type="number"
                     className="input-field"
                     required
                     value={newListing.quantity}
-                    onChange={e => setNewListing({...newListing, quantity: e.target.value})}
+                    onChange={e => setNewListing({ ...newListing, quantity: e.target.value })}
                   />
                 </div>
                 <div>
                   <label className="block text-sm font-medium mb-1">Price/kg (₹)</label>
-                  <input 
-                    type="number" 
+                  <input
+                    type="number"
                     className="input-field"
                     required
                     value={newListing.price}
-                    onChange={e => setNewListing({...newListing, price: e.target.value})}
+                    onChange={e => setNewListing({ ...newListing, price: e.target.value })}
                   />
                 </div>
               </div>
               <div>
                 <label className="block text-sm font-medium mb-1">Description</label>
-                <textarea 
-                  className="input-field" 
+                <textarea
+                  className="input-field"
                   rows={3}
                   required
                   value={newListing.description}
-                  onChange={e => setNewListing({...newListing, description: e.target.value})}
+                  onChange={e => setNewListing({ ...newListing, description: e.target.value })}
                 />
               </div>
               <div className="flex gap-4 pt-4">
-                <button 
-                  type="button" 
+                <button
+                  type="button"
                   onClick={() => setShowSellModal(false)}
                   className="flex-1 py-3 text-gray-600 font-medium hover:bg-gray-100 rounded-xl"
                 >
                   Cancel
                 </button>
-                <button 
-                  type="submit" 
+                <button
+                  type="submit"
                   className="flex-1 btn-primary"
                 >
                   List Item

@@ -4,10 +4,10 @@ import { useEffect, useState } from 'react';
 import { useSession } from 'next-auth/react';
 import { motion } from 'framer-motion';
 import Link from 'next/link';
-import { 
-  TruckIcon, 
-  ClipboardDocumentCheckIcon, 
-  ChartBarIcon, 
+import {
+  TruckIcon,
+  ClipboardDocumentCheckIcon,
+  ChartBarIcon,
   MapIcon,
   UserGroupIcon
 } from '@heroicons/react/24/outline';
@@ -32,6 +32,7 @@ export default function MunicipalDashboard() {
   const { data: session } = useSession();
   const [stats, setStats] = useState<Stats | null>(null);
   const [recentReports, setRecentReports] = useState<RecentReport[]>([]);
+  const [systemStatus, setSystemStatus] = useState<'online' | 'offline'>('online');
 
   useEffect(() => {
     fetchStats();
@@ -43,8 +44,10 @@ export default function MunicipalDashboard() {
       const data = await res.json();
       setStats(data.stats);
       setRecentReports(data.recentReports);
+      setSystemStatus('online');
     } catch (error) {
       console.error('Error fetching stats:', error);
+      setSystemStatus('offline');
     }
   };
 
@@ -63,8 +66,10 @@ export default function MunicipalDashboard() {
           <p className="text-gray-600">Overview of city waste management operations</p>
         </div>
         <div className="flex gap-2">
-          <span className="px-3 py-1 bg-green-100 text-green-800 rounded-full text-sm font-medium">System Online</span>
-          <span className="px-3 py-1 bg-blue-100 text-blue-800 rounded-full text-sm font-medium">Bangalore South</span>
+          <span className={`px-3 py-1 rounded-full text-sm font-medium ${systemStatus === 'online' ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'
+            }`}>
+            System {systemStatus === 'online' ? 'Online' : 'Offline'}
+          </span>
         </div>
       </div>
 
@@ -143,9 +148,8 @@ export default function MunicipalDashboard() {
           <div className="space-y-4">
             {recentReports.map((report) => (
               <div key={report._id} className="flex gap-3 items-start p-3 rounded-lg hover:bg-gray-50 transition-colors border-b border-gray-100 last:border-0">
-                <div className={`w-2 h-2 mt-2 rounded-full ${
-                  report.status === 'pending' ? 'bg-red-500' : 'bg-green-500'
-                }`} />
+                <div className={`w-2 h-2 mt-2 rounded-full ${report.status === 'pending' ? 'bg-red-500' : 'bg-green-500'
+                  }`} />
                 <div>
                   <p className="font-medium text-gray-800 text-sm">{report.type.replace('_', ' ')} reported</p>
                   <p className="text-xs text-gray-500">by {report.reportedBy?.name} • <span className="capitalize">{report.status}</span></p>
